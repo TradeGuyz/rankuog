@@ -23,7 +23,12 @@ rankuog/
 - **API:** REST
 
 ### Database
-- **PostgreSQL**
+- **Supabase** (PostgreSQL)
+
+### Notable Tools
+- **React Toastify** — toast notifications on the frontend
+- **Resend** — transactional email delivery
+- **n8n** — workflow automation and integrations
 
 ### Administration
 - **Notion** — used to manage platform operations, content, and workflows
@@ -32,7 +37,7 @@ rankuog/
 
 ### Prerequisites
 - Node.js
-- PostgreSQL
+- Supabase account (or local Supabase CLI)
 
 ### Frontend
 
@@ -52,10 +57,12 @@ npm run dev
 
 ### Database
 
-Create a PostgreSQL database and configure the connection string in your backend environment variables.
+Configure your Supabase project credentials in your backend environment variables.
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/rankuog
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 ## Contributing
