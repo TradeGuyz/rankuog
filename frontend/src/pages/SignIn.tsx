@@ -122,6 +122,15 @@ export default function SignIn() {
           </form>
         )}
       </div>
+      <p className="text-xs text-white/25 text-center mt-4 max-w-[320px]">
+        By signing in you agree to our{' '}
+        <button
+          onClick={() => navigate('/terms')}
+          className="text-white/40 hover:text-white/70 underline underline-offset-2 transition-colors cursor-pointer"
+        >
+          Terms of Service
+        </button>
+      </p>
       <button
           onClick={() => navigate('/')}
           className="flex items-center gap-1.5 text-sm text-white/40 hover:text-white/70 transition-colors cursor-pointer mt-6"

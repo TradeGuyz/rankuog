@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { FiChevronDown } from 'react-icons/fi'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
 const DEPARTMENTS = [
   'Computer Science',
+  'Information Systems',
   'Engineering',
-  'Medicine',
   'Natural Sciences',
-  'Business',
+  'Agriculture & Forestry',
+  'Environmental Studies',
+  'Social Sciences',
+  'Medical Sciences',
+  'Behavioural Sciences',
+  'Business & Entrepreneurship',
+  'Education & Humanities',
 ]
 
 export default function SignUp() {
@@ -51,10 +58,20 @@ export default function SignUp() {
     })
 
     if (error) {
-      setError(error.message)
+      const msg = error.message.toLowerCase()
+      if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('already exists')) {
+        setError('A user with that Student ID already exists. Try signing in instead.')
+      } else {
+        setError(error.message)
+      }
       setSubmitting(false)
       return
     }
+
+    // Fire-and-forget welcome email — don't block signup on email failure
+    supabase.functions.invoke('send-welcome-email', {
+      body: { name: displayName.trim(), email: session.user.email },
+    })
 
     await refreshProfile()
     navigate('/', { replace: true })
@@ -90,7 +107,7 @@ export default function SignUp() {
             <input
               type="text"
               className={inputClass}
-              placeholder="Kevin Johnson"
+              placeholder="Nickelcy Francois"
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               required
@@ -103,7 +120,7 @@ export default function SignUp() {
             <input
               type="text"
               className={inputClass}
-              placeholder="202300198"
+              placeholder="1048549"
               value={studentId}
               onChange={e => setStudentId(e.target.value)}
               required
@@ -127,17 +144,20 @@ export default function SignUp() {
           {/* Department */}
           <div>
             <label className={labelClass}>Department</label>
-            <select
-              className={inputClass}
-              value={department}
-              onChange={e => setDepartment(e.target.value)}
-              required
-            >
-              <option value="" disabled className="bg-[#111827] text-white/30">Select department</option>
-              {DEPARTMENTS.map(d => (
-                <option key={d} value={d} className="bg-[#111827] text-white">{d}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                className={`${inputClass} appearance-none pr-9`}
+                value={department}
+                onChange={e => setDepartment(e.target.value)}
+                required
+              >
+                <option value="" disabled className="bg-[#111827] text-white/30">Select department</option>
+                {DEPARTMENTS.map(d => (
+                  <option key={d} value={d} className="bg-[#111827] text-white">{d}</option>
+                ))}
+              </select>
+              <FiChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40" />
+            </div>
           </div>
 
           {/* Enrolment Year */}

@@ -26,11 +26,17 @@ const ACADEMIC_YEARS = ['2025/2026', '2024/2025'] as const
 
 
 const DEPT_STYLES: Record<string, string> = {
-  'Computer Science': 'bg-blue-900/60 text-blue-300 border border-blue-700/40',
-  'Engineering':      'bg-orange-900/60 text-orange-300 border border-orange-700/40',
-  'Medicine':         'bg-pink-900/60 text-pink-300 border border-pink-700/40',
-  'Natural Sciences': 'bg-green-900/60 text-green-300 border border-green-700/40',
-  'Business':         'bg-purple-900/60 text-purple-300 border border-purple-700/40',
+  'Computer Science':        'bg-blue-900/60 text-blue-300 border border-blue-700/40',
+  'Information Systems':     'bg-cyan-900/60 text-cyan-300 border border-cyan-700/40',
+  'Engineering':             'bg-orange-900/60 text-orange-300 border border-orange-700/40',
+  'Natural Sciences':        'bg-green-900/60 text-green-300 border border-green-700/40',
+  'Agriculture & Forestry':  'bg-lime-900/60 text-lime-300 border border-lime-700/40',
+  'Environmental Studies':   'bg-teal-900/60 text-teal-300 border border-teal-700/40',
+  'Social Sciences':         'bg-violet-900/60 text-violet-300 border border-violet-700/40',
+  'Medical Sciences':        'bg-pink-900/60 text-pink-300 border border-pink-700/40',
+  'Behavioural Sciences':    'bg-rose-900/60 text-rose-300 border border-rose-700/40',
+  'Business & Entrepreneurship': 'bg-purple-900/60 text-purple-300 border border-purple-700/40',
+  'Education & Humanities':  'bg-amber-900/60 text-amber-300 border border-amber-700/40',
 }
 
 const RANK_STYLES = [
@@ -40,7 +46,19 @@ const RANK_STYLES = [
 ]
 
 const PAGE_SIZE = 25
-const DEPARTMENTS = ['Computer Science', 'Engineering', 'Medicine', 'Natural Sciences', 'Business']
+const DEPARTMENTS = [
+  'Computer Science',
+  'Information Systems',
+  'Engineering',
+  'Natural Sciences',
+  'Agriculture & Forestry',
+  'Environmental Studies',
+  'Social Sciences',
+  'Medical Sciences',
+  'Behavioural Sciences',
+  'Business & Entrepreneurship',
+  'Education & Humanities',
+]
 const YEAR_GROUPS = [1, 2, 3, 4]
 
 function getYearGroup(enrolment_year: number, academicStart: number): number {

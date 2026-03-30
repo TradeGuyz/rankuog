@@ -32,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [initialized, setInitialized] = useState(false)
 
   async function fetchProfile(userId: string) {
     const { data, error } = await supabase
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
+      setInitialized(true)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
@@ -71,13 +73,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
+    if (!initialized) return
+
     if (session?.user.id) {
       fetchProfile(session.user.id).finally(() => setLoading(false))
     } else {
       setProfile(null)
       setLoading(false)
     }
-  }, [session?.user.id])
+  }, [session?.user.id, initialized])
 
   return (
     <AuthContext.Provider value={{ session, profile, loading, refreshProfile, signOut }}>

@@ -54,6 +54,9 @@ export default function Profile() {
   const [gpaYears, setGpaYears] = useState<GpaYearRow[]>([])
   const [anonymousSaving, setAnonymousSaving] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteSaving, setDeleteSaving] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
@@ -273,6 +276,20 @@ export default function Profile() {
     setNotifySaving(false)
   }
 
+  async function handleDeleteAccount() {
+    if (deleteSaving) return
+    setDeleteSaving(true)
+    setDeleteError(null)
+    const res = await supabase.functions.invoke('delete-account')
+    if (res.error) {
+      setDeleteError(res.error.message)
+      setDeleteSaving(false)
+      return
+    }
+    await signOut()
+    navigate('/', { replace: true })
+  }
+
   async function handleSignOut() {
     await signOut()
     navigate('/', { replace: true })
@@ -420,7 +437,10 @@ export default function Profile() {
 
         {/* Sign out + Delete Account */}
         <div className="mt-8 flex justify-end gap-3">
-          <button className="px-4 py-2 rounded-lg border border-red-500/40 text-red-400 text-sm font-medium hover:border-red-500/70 hover:text-red-300 transition-colors cursor-pointer">
+          <button
+            onClick={() => { setDeleteError(null); setDeleteOpen(true) }}
+            className="px-4 py-2 rounded-lg border border-red-500/40 text-red-400 text-sm font-medium hover:border-red-500/70 hover:text-red-300 transition-colors cursor-pointer"
+          >
             Delete Account
           </button>
           <button
@@ -599,6 +619,46 @@ export default function Profile() {
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {deleteOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4"
+          onClick={() => !deleteSaving && setDeleteOpen(false)}
+        >
+          <div
+            className="bg-[#0a0a0a] border border-white/10 rounded-2xl px-8 py-8 w-full max-w-[400px]"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-1">
+              <h3 className="text-lg font-bold text-white">Confirm Deletion</h3>
+              <button onClick={() => setDeleteOpen(false)} disabled={deleteSaving} className="text-white/40 hover:text-white transition-colors cursor-pointer">
+                <FiX size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-white/40 mb-6">
+              This will permanently delete your profile, GPA entries, and all associated data. This cannot be undone.
+            </p>
+            {deleteError && <p className="text-xs text-red-400 mb-4">{deleteError}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteSaving}
+                className="flex-1 bg-red-500/20 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed border border-red-500/40 text-red-400 font-bold text-sm py-2.5 rounded-lg transition-colors cursor-pointer"
+              >
+                {deleteSaving ? 'Deleting…' : 'Confirm'}
+              </button>
+              <button
+                onClick={() => setDeleteOpen(false)}
+                disabled={deleteSaving}
+                className="flex-1 border border-white/10 text-white/70 hover:text-white hover:border-white/30 text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
