@@ -22,7 +22,7 @@ interface Student {
 // year_group = 2025 - enrolment_year + 1
 // 2025 → Year 1, 2024 → Year 2, 2023 → Year 3, 2022 → Year 4
 const CURRENT_ACADEMIC_START = 2025
-const ACADEMIC_YEARS = ['2025/2026', '2024/2025'] as const
+const ACADEMIC_YEARS = ['2025/2026', '2024/2025', '2023/2024', '2022/2023'] as const
 
 
 const DEPT_STYLES: Record<string, string> = {
