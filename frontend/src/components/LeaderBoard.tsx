@@ -117,7 +117,7 @@ export default function LeaderBoard() {
 
   const filtered = useMemo(() => {
     let list = students.filter(s => {
-      if (yearFilter !== null && getYearGroup(s.enrolment_year) !== yearFilter) return false
+      if (yearFilter !== null && getYearGroup(s.enrolment_year, CURRENT_ACADEMIC_START) !== yearFilter) return false
       if (deptFilter !== null && s.department !== deptFilter) return false
       if (search) {
         const q = search.toLowerCase()
