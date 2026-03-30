@@ -1,28 +1,88 @@
-// Shown when the logged-in user has a verified GPA entry.
-// Replace `isLoggedIn` and `currentUser` with real auth/data later.
+import { useEffect, useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 
-const isLoggedIn = true
+interface RankStats {
+  globalRank: number
+  globalTotal: number
+  yearGroupRank: number
+  yearGroupTotal: number
+  currentYearGpa: number | null
+  currentAcademicYear: string
+}
 
-const currentUser = {
-  display_name: 'Kevin Johnson',
-  department: 'Computer Science',
-  enrolment_year: 2023,
-  overall_gpa: 3.72,
-  current_year_gpa: 3.85,
-  current_academic_year: '2025/2026',
-  global_rank: 8,
-  global_total: 142,
-  year_group: 3,
-  year_group_rank: 3,
-  year_group_total: 38,
+function getAcademicYearStart(): number {
+  const now = new Date()
+  return now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1
 }
 
 export default function UserTag() {
-  if (!isLoggedIn) return null
+  const { session, profile } = useAuth()
+  const [stats, setStats] = useState<RankStats | null>(null)
 
-  const { display_name, department, enrolment_year, overall_gpa, current_year_gpa,
-    current_academic_year, global_rank, global_total, year_group,
-    year_group_rank, year_group_total } = currentUser
+  useEffect(() => {
+    if (!profile || profile.overall_gpa == null) return
+
+    async function fetchStats() {
+      const yearStart = getAcademicYearStart()
+      const academicYear = `${yearStart}/${yearStart + 1}`
+
+      const [globalRankRes, globalTotalRes, yearRankRes, yearTotalRes, currentYearRes] = await Promise.all([
+        supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .gt('overall_gpa', profile!.overall_gpa!)
+          .eq('email_verified', true),
+        supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .not('overall_gpa', 'is', null)
+          .eq('email_verified', true),
+        supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .gt('overall_gpa', profile!.overall_gpa!)
+          .eq('email_verified', true)
+          .eq('enrolment_year', profile!.enrolment_year),
+        supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .not('overall_gpa', 'is', null)
+          .eq('email_verified', true)
+          .eq('enrolment_year', profile!.enrolment_year),
+        supabase
+          .from('gpa_per_year')
+          .select('gpa')
+          .eq('user_id', profile!.id)
+          .eq('academic_year', academicYear)
+          .maybeSingle(),
+      ])
+
+      setStats({
+        globalRank: (globalRankRes.count ?? 0) + 1,
+        globalTotal: globalTotalRes.count ?? 0,
+        yearGroupRank: (yearRankRes.count ?? 0) + 1,
+        yearGroupTotal: yearTotalRes.count ?? 0,
+        currentYearGpa: currentYearRes.data?.gpa ?? null,
+        currentAcademicYear: academicYear,
+      })
+    }
+
+    fetchStats()
+  }, [profile])
+
+  if (!session || !profile) return null
+
+  const yearStart = getAcademicYearStart()
+  const yearGroup = yearStart - profile.enrolment_year + 1
+
+  const globalRank = stats ? `#${stats.globalRank}` : '—'
+  const globalTotal = stats ? stats.globalTotal : '—'
+  const yearGroupRank = stats ? `#${stats.yearGroupRank}` : '—'
+  const yearGroupTotal = stats ? stats.yearGroupTotal : '—'
+  const overallGpa = profile.overall_gpa != null ? profile.overall_gpa.toFixed(2) : '—'
+  const currentYearGpa = stats?.currentYearGpa != null ? stats.currentYearGpa.toFixed(2) : '—'
+  const academicYear = stats?.currentAcademicYear ?? `${yearStart}/${yearStart + 1}`
 
   return (
     <section className="max-w-[1000px] mx-auto px-6 mb-5">
@@ -30,9 +90,10 @@ export default function UserTag() {
 
         {/* Name + identity — top left on small, hidden on large (shown in stats row instead) */}
         <div className="mb-4 lg:hidden">
-          <p className="text-sm font-semibold text-white">{display_name}</p>
+          <p className="text-sm font-semibold text-white">{profile.display_name}</p>
           <p className="text-xs text-white/40 mt-0.5 font-mono">
-            {department} · Year {year_group} · {enrolment_year}          </p>
+            {profile.department} · Year {yearGroup} · {profile.enrolment_year}
+          </p>
         </div>
 
         {/* Stats row */}
@@ -41,36 +102,37 @@ export default function UserTag() {
           {/* Global Rank */}
           <div className="pr-6 border-r border-white/10 mr-6">
             <p className="text-[10px] font-semibold tracking-widest text-white/40 uppercase mb-1">Global Rank</p>
-            <p className="text-xl font-bold text-[#d4af37] font-mono leading-none">#{global_rank}</p>
-            <p className="text-xs text-white/40 mt-1">of {global_total} students</p>
+            <p className="text-xl font-bold text-[#d4af37] font-mono leading-none">{globalRank}</p>
+            <p className="text-xs text-white/40 mt-1">of {globalTotal} students</p>
           </div>
 
           {/* Year Group Rank */}
           <div className="pr-6 border-r border-white/10 mr-6">
-            <p className="text-[10px] font-semibold tracking-widest text-white/40 uppercase mb-1">Year {year_group} Rank</p>
-            <p className="text-xl font-bold text-white font-mono leading-none">#{year_group_rank}</p>
-            <p className="text-xs text-white/40 mt-1">of {year_group_total} Year {year_group}s</p>
+            <p className="text-[10px] font-semibold tracking-widest text-white/40 uppercase mb-1">Year {yearGroup} Rank</p>
+            <p className="text-xl font-bold text-white font-mono leading-none">{yearGroupRank}</p>
+            <p className="text-xs text-white/40 mt-1">of {yearGroupTotal} Year {yearGroup}s</p>
           </div>
 
           {/* Overall GPA */}
           <div className="pr-6 border-r border-white/10 mr-6">
             <p className="text-[10px] font-semibold tracking-widest text-white/40 uppercase mb-1">Overall GPA</p>
-            <p className="text-xl font-bold text-white font-mono leading-none">{overall_gpa.toFixed(2)}</p>
+            <p className="text-xl font-bold text-white font-mono leading-none">{overallGpa}</p>
             <p className="text-xs text-white/40 mt-1">4.0 scale</p>
           </div>
 
           {/* Current academic year GPA */}
           <div className="pr-6 lg:border-r lg:border-white/10 lg:mr-6">
-            <p className="text-[10px] font-semibold tracking-widest text-white/40 uppercase mb-1">{current_academic_year} GPA</p>
-            <p className="text-xl font-bold text-white font-mono leading-none">{current_year_gpa.toFixed(2)}</p>
+            <p className="text-[10px] font-semibold tracking-widest text-white/40 uppercase mb-1">{academicYear} GPA</p>
+            <p className="text-xl font-bold text-white font-mono leading-none">{currentYearGpa}</p>
             <p className="text-xs text-white/40 mt-1">this academic year</p>
           </div>
 
           {/* Name + identity — right end on large screens only */}
           <div className="hidden lg:block ml-auto text-right">
-            <p className="text-sm font-semibold text-white">{display_name}</p>
+            <p className="text-sm font-semibold text-white">{profile.display_name}</p>
             <p className="text-xs text-white/40 mt-0.5 font-mono">
-              {department} · Year {year_group} · {enrolment_year}            </p>
+              {profile.department} · Year {yearGroup} · {profile.enrolment_year}
+            </p>
           </div>
 
         </div>

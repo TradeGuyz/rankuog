@@ -1,27 +1,76 @@
-const stats = [
-  {
-    label: 'PARTICIPANTS',
-    value: '142',
-    sub: 'across all departments',
-  },
-  {
-    label: 'AVERAGE GPA',
-    value: '3.24',
-    sub: 'overall mean',
-  },
-  {
-    label: 'TOP GPA',
-    value: '3.98',
-    sub: 'Priya Sharma · CS',
-  },
-  {
-    label: 'DEPARTMENTS',
-    value: '5',
-    sub: 'competing this year',
-  },
-]
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
+
+interface StatsData {
+  participants: number
+  averageGpa: number
+  topGpa: number
+  topName: string
+  topDepartment: string
+  departments: number
+}
+
+function getSubtitleDate(): string {
+  return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
 
 export default function States() {
+  const [data, setData] = useState<StatsData | null>(null)
+
+  useEffect(() => {
+    async function fetchStats() {
+      const baseQuery = supabase
+        .from('users')
+        .select('overall_gpa, display_name, department, is_anonymous')
+        .eq('email_verified', true)
+        .not('overall_gpa', 'is', null)
+
+      const [allRes, topRes] = await Promise.all([
+        baseQuery,
+        supabase
+          .from('users')
+          .select('overall_gpa, display_name, department, is_anonymous')
+          .eq('email_verified', true)
+          .not('overall_gpa', 'is', null)
+          .order('overall_gpa', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+
+      if (allRes.error || !allRes.data) return
+
+      const rows = allRes.data
+      const participants = rows.length
+      const averageGpa = rows.reduce((sum, r) => sum + Number(r.overall_gpa), 0) / participants
+      const departments = new Set(rows.map((r) => r.department)).size
+
+      const top = topRes.data
+      setData({
+        participants,
+        averageGpa,
+        topGpa: top ? Number(top.overall_gpa) : 0,
+        topName: top ? (top.is_anonymous ? 'Anonymous' : top.display_name) : '—',
+        topDepartment: top ? top.department : '—',
+        departments,
+      })
+    }
+
+    fetchStats()
+  }, [])
+
+  const participants = data ? String(data.participants) : '—'
+  const averageGpa = data ? data.averageGpa.toFixed(2) : '—'
+  const topGpa = data ? data.topGpa.toFixed(2) : '—'
+  const topSub = data ? `${data.topName} · ${data.topDepartment}` : '—'
+  const departments = data ? String(data.departments) : '—'
+
+  const stats = [
+    { label: 'PARTICIPANTS', value: participants, sub: 'across all departments' },
+    { label: 'AVERAGE GPA',  value: averageGpa,   sub: 'overall mean' },
+    { label: 'TOP GPA',      value: topGpa,        sub: topSub },
+    { label: 'DEPARTMENTS',  value: departments,   sub: 'competing this year' },
+  ]
+
   return (
     <section className="max-w-[1000px] mx-auto px-6 py-6">
       <div className="mb-5">
@@ -29,7 +78,7 @@ export default function States() {
           Leaderboard
         </h1>
         <p className="text-xs text-white/50 mt-0.5">
-          University of Guyana · All Departments · All Years · March 2026
+          University of Guyana · All Departments · All Years · {getSubtitleDate()}
         </p>
       </div>
 

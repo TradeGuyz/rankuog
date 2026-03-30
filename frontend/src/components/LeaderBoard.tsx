@@ -1,4 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { FiSearch, FiChevronDown } from 'react-icons/fi'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../context/AuthContext'
 
 interface GpaPerYear {
   academic_year: string
@@ -21,159 +24,6 @@ interface Student {
 const CURRENT_ACADEMIC_START = 2025
 const ACADEMIC_YEARS = ['2025/2026', '2024/2025'] as const
 
-const DUMMY_STUDENTS: Student[] = [
-  {
-    id: '1', display_name: 'Priya Sharma', student_id: '202100234',
-    department: 'Computer Science', overall_gpa: 3.98, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.95 }, { academic_year: '2024/2025', gpa: 3.97 }],
-  },
-  {
-    id: '2', display_name: 'Marcus Williams', student_id: '202100089',
-    department: 'Engineering', overall_gpa: 3.94, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.90 }, { academic_year: '2024/2025', gpa: 3.93 }],
-  },
-  {
-    id: '3', display_name: 'Aisha Mohammed', student_id: '202200156',
-    department: 'Computer Science', overall_gpa: 3.91, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.88 }, { academic_year: '2024/2025', gpa: 3.91 }],
-  },
-  {
-    id: '4', display_name: 'Daniel Fernandes', student_id: '202100312',
-    department: 'Medicine', overall_gpa: 3.88, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.85 }, { academic_year: '2024/2025', gpa: 3.87 }],
-  },
-  {
-    id: '5', display_name: 'Simone Baptiste', student_id: '202200078',
-    department: 'Natural Sciences', overall_gpa: 3.85, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.92 }, { academic_year: '2024/2025', gpa: 3.80 }],
-  },
-  {
-    id: '6', display_name: 'Rohit Persaud', student_id: '202100445',
-    department: 'Computer Science', overall_gpa: 3.82, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.78 }, { academic_year: '2024/2025', gpa: 3.84 }],
-  },
-  {
-    id: '7', display_name: 'Tamara Singh', student_id: '202300021',
-    department: 'Business', overall_gpa: 3.80, enrolment_year: 2024,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.80 }, { academic_year: '2024/2025', gpa: 3.75 }],
-  },
-  {
-    id: '8', display_name: 'Kevin Johnson', student_id: '202300198',
-    department: 'Computer Science', overall_gpa: 3.72, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.68 }, { academic_year: '2024/2025', gpa: 3.75 }],
-    is_current_user: true,
-  },
-  {
-    id: '9', display_name: 'Farah Ali', student_id: '202200289',
-    department: 'Medicine', overall_gpa: 3.70, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.65 }, { academic_year: '2024/2025', gpa: 3.72 }],
-  },
-  {
-    id: '10', display_name: 'Leon Rodrigues', student_id: '202100567',
-    department: 'Engineering', overall_gpa: 3.68, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.60 }, { academic_year: '2024/2025', gpa: 3.70 }],
-  },
-  {
-    id: '11', display_name: 'Natasha Henry', student_id: '202300445',
-    department: 'Natural Sciences', overall_gpa: 3.65, enrolment_year: 2024,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.70 }, { academic_year: '2024/2025', gpa: 3.60 }],
-  },
-  {
-    id: '12', display_name: 'Omar Khan', student_id: '202200391',
-    department: 'Business', overall_gpa: 3.62, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.58 }, { academic_year: '2024/2025', gpa: 3.65 }],
-  },
-  {
-    id: '13', display_name: 'Jasmine Clarke', student_id: '202100678',
-    department: 'Medicine', overall_gpa: 3.59, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.55 }, { academic_year: '2024/2025', gpa: 3.62 }],
-  },
-  {
-    id: '14', display_name: 'Ryan Gopaul', student_id: '202300512',
-    department: 'Engineering', overall_gpa: 3.55, enrolment_year: 2024,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.55 }, { academic_year: '2024/2025', gpa: 3.48 }],
-  },
-  {
-    id: '15', display_name: 'Serena Boodie', student_id: '202200103',
-    department: 'Computer Science', overall_gpa: 3.52, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.48 }, { academic_year: '2024/2025', gpa: 3.55 }],
-  },
-  {
-    id: '16', display_name: 'Andre Cummings', student_id: '202100789',
-    department: 'Business', overall_gpa: 3.48, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.42 }, { academic_year: '2024/2025', gpa: 3.50 }],
-  },
-  {
-    id: '17', display_name: 'Tisha Ramphal', student_id: '202300634',
-    department: 'Natural Sciences', overall_gpa: 3.44, enrolment_year: 2025,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.44 }, { academic_year: '2024/2025', gpa: 0.00 }],
-  },
-  {
-    id: '18', display_name: 'David Narine', student_id: '202200567',
-    department: 'Medicine', overall_gpa: 3.41, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.38 }, { academic_year: '2024/2025', gpa: 3.44 }],
-  },
-  {
-    id: '19', display_name: 'Keisha Fraser', student_id: '202100890',
-    department: 'Engineering', overall_gpa: 3.37, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.30 }, { academic_year: '2024/2025', gpa: 3.40 }],
-  },
-  {
-    id: '20', display_name: 'Miguel Sankar', student_id: '202300756',
-    department: 'Computer Science', overall_gpa: 3.33, enrolment_year: 2025,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.33 }, { academic_year: '2024/2025', gpa: 0.00 }],
-  },
-  {
-    id: '21', display_name: 'Alicia Deoraj', student_id: '202200678',
-    department: 'Business', overall_gpa: 3.28, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.25 }, { academic_year: '2024/2025', gpa: 3.30 }],
-  },
-  {
-    id: '22', display_name: 'Jerome Bacchus', student_id: '202100923',
-    department: 'Natural Sciences', overall_gpa: 3.22, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.18 }, { academic_year: '2024/2025', gpa: 3.25 }],
-  },
-  {
-    id: '23', display_name: 'Pooja Ramkhelawan', student_id: '202300867',
-    department: 'Medicine', overall_gpa: 3.18, enrolment_year: 2024,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.18 }, { academic_year: '2024/2025', gpa: 3.10 }],
-  },
-  {
-    id: '24', display_name: 'Chris Edghill', student_id: '202200789',
-    department: 'Engineering', overall_gpa: 3.12, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.08 }, { academic_year: '2024/2025', gpa: 3.15 }],
-  },
-  {
-    id: '25', display_name: 'Fatima Hussein', student_id: '202100012',
-    department: 'Computer Science', overall_gpa: 3.05, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 3.00 }, { academic_year: '2024/2025', gpa: 3.08 }],
-  },
-  {
-    id: '26', display_name: 'Brandon Kissoon', student_id: '202300978',
-    department: 'Business', overall_gpa: 2.98, enrolment_year: 2025,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 2.98 }, { academic_year: '2024/2025', gpa: 0.00 }],
-  },
-  {
-    id: '27', display_name: 'Indira Ramdeo', student_id: '202200890',
-    department: 'Natural Sciences', overall_gpa: 2.90, enrolment_year: 2023,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 2.88 }, { academic_year: '2024/2025', gpa: 2.92 }],
-  },
-  {
-    id: '28', display_name: 'Trevor Lall', student_id: '202100145',
-    department: 'Medicine', overall_gpa: 2.82, enrolment_year: 2022,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 2.78 }, { academic_year: '2024/2025', gpa: 2.85 }],
-  },
-  {
-    id: '29', display_name: 'Shanti Toolsie', student_id: '202400056',
-    department: 'Engineering', overall_gpa: 2.65, enrolment_year: 2025,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 2.65 }, { academic_year: '2024/2025', gpa: 0.00 }],
-  },
-  {
-    id: '30', display_name: 'Marcus Deen', student_id: '202300089',
-    department: 'Computer Science', overall_gpa: 2.52, enrolment_year: 2024,
-    gpa_per_year: [{ academic_year: '2025/2026', gpa: 2.50 }, { academic_year: '2024/2025', gpa: 2.55 }],
-  },
-]
 
 const DEPT_STYLES: Record<string, string> = {
   'Computer Science': 'bg-blue-900/60 text-blue-300 border border-blue-700/40',
@@ -190,12 +40,11 @@ const RANK_STYLES = [
 ]
 
 const PAGE_SIZE = 25
-const TABS = ['Global Overall', 'By Year Group', 'By Department', '2025/2026 GPA'] as const
 const DEPARTMENTS = ['Computer Science', 'Engineering', 'Medicine', 'Natural Sciences', 'Business']
 const YEAR_GROUPS = [1, 2, 3, 4]
 
-function getYearGroup(enrolment_year: number): number {
-  return CURRENT_ACADEMIC_START - enrolment_year + 1
+function getYearGroup(enrolment_year: number, academicStart: number): number {
+  return academicStart - enrolment_year + 1
 }
 
 function getGpa(student: Student, mode: string): number {
@@ -205,15 +54,51 @@ function getGpa(student: Student, mode: string): number {
 }
 
 export default function LeaderBoard() {
-  const [activeTab, setActiveTab] = useState<string>('Global Overall')
+  const { session, loading: authLoading } = useAuth()
+  const [students, setStudents] = useState<Student[]>([])
+  const [loadingData, setLoadingData] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+
   const [gpaMode, setGpaMode] = useState<string>('overall')
   const [yearFilter, setYearFilter] = useState<number | null>(null)
   const [deptFilter, setDeptFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
 
+  useEffect(() => {
+    if (authLoading) return
+    async function fetchLeaderboard() {
+      setLoadingData(true)
+      setFetchError(null)
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, display_name, student_id, department, enrolment_year, overall_gpa, is_anonymous, gpa_per_year(academic_year, gpa)')
+        .eq('email_verified', true)
+        .not('overall_gpa', 'is', null)
+      if (error) {
+        setFetchError(error.message)
+        setLoadingData(false)
+        return
+      }
+      const currentUserId = session?.user.id
+      const mapped: Student[] = (data ?? []).map(row => ({
+        id: row.id,
+        display_name: row.is_anonymous ? 'Anonymous' : row.display_name,
+        student_id: row.is_anonymous ? '—' : row.student_id,
+        department: row.department,
+        enrolment_year: row.enrolment_year,
+        overall_gpa: Number(row.overall_gpa),
+        gpa_per_year: (row.gpa_per_year as GpaPerYear[]) ?? [],
+        is_current_user: row.id === currentUserId,
+      }))
+      setStudents(mapped)
+      setLoadingData(false)
+    }
+    fetchLeaderboard()
+  }, [authLoading, session?.user.id])
+
   const filtered = useMemo(() => {
-    let list = DUMMY_STUDENTS.filter(s => {
+    let list = students.filter(s => {
       if (yearFilter !== null && getYearGroup(s.enrolment_year) !== yearFilter) return false
       if (deptFilter !== null && s.department !== deptFilter) return false
       if (search) {
@@ -224,7 +109,7 @@ export default function LeaderBoard() {
     })
     list = [...list].sort((a, b) => getGpa(b, gpaMode) - getGpa(a, gpaMode))
     return list
-  }, [yearFilter, deptFilter, search, gpaMode])
+  }, [students, yearFilter, deptFilter, search, gpaMode])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -235,23 +120,6 @@ export default function LeaderBoard() {
 
   return (
     <section className="max-w-[1000px] mx-auto px-6 pb-12">
-
-      {/* Tab navigation */}
-      <div className="flex gap-0 border-b border-white/10 mb-4">
-        {TABS.map(tab => (
-          <button
-            key={tab}
-            onClick={() => { setActiveTab(tab); resetPage() }}
-            className={`px-4 py-2.5 text-[14px] font-medium border-b-2 transition-colors cursor-pointer ${
-              activeTab === tab
-                ? 'border-[#d4af37] text-[#d4af37]'
-                : 'border-transparent text-white/50 hover:text-white/80'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
 
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -277,35 +145,38 @@ export default function LeaderBoard() {
         </div>
 
         {/* Year group dropdown */}
-        <select
-          value={yearFilter ?? ''}
-          onChange={e => { setYearFilter(e.target.value ? Number(e.target.value) : null); resetPage() }}
-          className="bg-[#111827] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white/80 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#d4af37] focus:border-[#d4af37]"
-        >
-          <option value="" className="bg-[#111827] text-white">All years</option>
-          {YEAR_GROUPS.map(y => (
-            <option key={y} value={y} className="bg-[#111827] text-white">Year {y}</option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={yearFilter ?? ''}
+            onChange={e => { setYearFilter(e.target.value ? Number(e.target.value) : null); resetPage() }}
+            className="appearance-none bg-[#111827] border border-white/10 rounded-md pl-3 pr-8 py-1.5 text-xs text-white/80 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#d4af37] focus:border-[#d4af37]"
+          >
+            <option value="" className="bg-[#111827] text-white">All years</option>
+            {YEAR_GROUPS.map(y => (
+              <option key={y} value={y} className="bg-[#111827] text-white">Year {y}</option>
+            ))}
+          </select>
+          <FiChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40" />
+        </div>
 
         {/* Department dropdown */}
-        <select
-          value={deptFilter ?? ''}
-          onChange={e => { setDeptFilter(e.target.value || null); resetPage() }}
-          className="bg-[#111827] border border-white/10 rounded-md px-3 py-1.5 text-xs text-white/80 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#d4af37] focus:border-[#d4af37]"
-        >
-          <option value="" className="bg-[#111827] text-white">All departments</option>
-          {DEPARTMENTS.map(d => (
-            <option key={d} value={d} className="bg-[#111827] text-white">{d}</option>
-          ))}
-        </select>
+        <div className="relative">
+          <select
+            value={deptFilter ?? ''}
+            onChange={e => { setDeptFilter(e.target.value || null); resetPage() }}
+            className="appearance-none bg-[#111827] border border-white/10 rounded-md pl-3 pr-8 py-1.5 text-xs text-white/80 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#d4af37] focus:border-[#d4af37]"
+          >
+            <option value="" className="bg-[#111827] text-white">All departments</option>
+            {DEPARTMENTS.map(d => (
+              <option key={d} value={d} className="bg-[#111827] text-white">{d}</option>
+            ))}
+          </select>
+          <FiChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40" />
+        </div>
 
         {/* Search */}
-        <div className="ml-auto flex items-center gap-2 bg-white/5 border border-white/10 rounded-md px-3 py-1.5">
-          <svg width="13" height="13" viewBox="0 0 20 20" fill="none" className="text-white/40 shrink-0">
-            <circle cx="8.5" cy="8.5" r="5.75" stroke="currentColor" strokeWidth="1.75"/>
-            <path d="M13 13l4 4" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"/>
-          </svg>
+        <div className="ml-auto hidden md:flex items-center gap-2 bg-white/5 border border-white/10 rounded-md px-3 py-1.5">
+          <FiSearch size={13} className="text-white/40 shrink-0" />
           <input
             type="text"
             placeholder="Search name or ID..."
@@ -317,86 +188,100 @@ export default function LeaderBoard() {
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-white/10 overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-[48px_1fr_180px_90px_160px] px-4 py-2.5 border-b border-white/10">
-          {['#', 'STUDENT', 'DEPARTMENT', 'YEAR', 'GPA'].map(h => (
-            <span key={h} className="text-[10px] font-semibold tracking-widest text-white/40 uppercase">{h}</span>
-          ))}
-        </div>
+      <div className="rounded-lg border border-white/10 overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-white/10">
+              {['#', 'STUDENT', 'DEPARTMENT', 'YEAR', 'GPA'].map(h => (
+                <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold tracking-widest text-white/40 uppercase whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {loadingData ? (
+              <tr><td colSpan={5} className="py-12 text-center text-white/30 text-sm">Loading...</td></tr>
+            ) : fetchError ? (
+              <tr><td colSpan={5} className="py-12 text-center text-red-400/70 text-sm">Failed to load leaderboard</td></tr>
+            ) : pageItems.length === 0 ? (
+              <tr><td colSpan={5} className="py-12 text-center text-white/30 text-sm">No results found</td></tr>
+            ) : (
+              pageItems.map((student, i) => {
+                const rank = startIndex + i + 1
+                const gpa = getGpa(student, gpaMode)
+                const academicStart = gpaMode === 'overall' ? CURRENT_ACADEMIC_START : parseInt(gpaMode.split('/')[0], 10)
+                const yearGroup = getYearGroup(student.enrolment_year, academicStart)
+                const isUser = student.is_current_user
 
-        {/* Rows */}
-        {pageItems.length === 0 ? (
-          <div className="py-12 text-center text-white/30 text-sm">No results found</div>
-        ) : (
-          pageItems.map((student, i) => {
-            const rank = startIndex + i + 1
-            const gpa = getGpa(student, gpaMode)
-            const yearGroup = getYearGroup(student.enrolment_year)
-            const isUser = student.is_current_user
+                return (
+                  <tr
+                    key={student.id}
+                    className={`border-b border-white/5 last:border-0 transition-colors ${
+                      isUser
+                        ? 'border-l-2 border-l-[#d4af37] bg-[#d4af37]/5'
+                        : 'hover:bg-white/[0.02]'
+                    }`}
+                  >
+                    {/* Rank */}
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {rank <= 3 ? (
+                          <span
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                            style={{ backgroundColor: RANK_STYLES[rank - 1].bg, color: RANK_STYLES[rank - 1].text }}
+                          >
+                            {rank}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-white/30 font-mono w-6 text-center">{rank}</span>
+                        )}
+                      </div>
+                    </td>
 
-            return (
-              <div
-                key={student.id}
-                className={`grid grid-cols-[48px_1fr_180px_90px_160px] items-center px-4 py-3.5 border-b border-white/5 last:border-0 transition-colors ${
-                  isUser
-                    ? 'border-l-2 border-l-[#d4af37] bg-[#d4af37]/5'
-                    : 'hover:bg-white/[0.02]'
-                }`}
-              >
-                {/* Rank */}
-                <div className="flex items-center">
-                  {rank <= 3 ? (
-                    <span
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
-                      style={{ backgroundColor: RANK_STYLES[rank - 1].bg, color: RANK_STYLES[rank - 1].text }}
-                    >
-                      {rank}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-white/30 font-mono w-6 text-center">{rank}</span>
-                  )}
-                </div>
+                    {/* Student */}
+                    <td className="px-4 py-3.5">
+                      <div className="flex flex-col justify-center gap-px">
+                        <div className="flex items-center gap-2 leading-none">
+                          <span className="text-sm font-medium text-white whitespace-nowrap">{student.display_name}</span>
+                          {isUser && (
+                            <span className="text-[9px] font-bold bg-[#d4af37] text-[#0a0a0a] px-1.5 py-0.5 rounded-sm tracking-widest shrink-0">YOU</span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-white/40 font-mono leading-none">{student.student_id}</span>
+                      </div>
+                    </td>
 
-                {/* Student */}
-                <div className="min-w-0 flex flex-col justify-center gap-px">
-                  <div className="flex items-center gap-2 leading-none">
-                    <span className="text-sm font-medium text-white truncate">{student.display_name}</span>
-                    {isUser && (
-                      <span className="text-[9px] font-bold bg-[#d4af37] text-[#0a0a0a] px-1.5 py-0.5 rounded-sm tracking-widest shrink-0">YOU</span>
-                    )}
-                  </div>
-                  <span className="text-[11px] text-white/40 font-mono leading-none">{student.student_id}</span>
-                </div>
+                    {/* Department */}
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${DEPT_STYLES[student.department] ?? 'bg-white/10 text-white/60'}`}>
+                        {student.department}
+                      </span>
+                    </td>
 
-                {/* Department */}
-                <div>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${DEPT_STYLES[student.department] ?? 'bg-white/10 text-white/60'}`}>
-                    {student.department}
-                  </span>
-                </div>
+                    {/* Year */}
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <span className="text-sm font-mono text-white/60">Year {yearGroup}</span>
+                    </td>
 
-                {/* Year */}
-                <div>
-                  <span className="text-sm font-mono text-white/60">Year {yearGroup}</span>
-                </div>
-
-                {/* GPA bar + value */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 bg-white/10 rounded-full h-1">
-                    <div
-                      className="h-1 rounded-full bg-emerald-400"
-                      style={{ width: `${(gpa / 4) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-mono text-white w-10 text-right">
-                    {gpa.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            )
-          })
-        )}
+                    {/* GPA bar + value */}
+                    <td className="px-4 py-3.5 whitespace-nowrap">
+                      <div className="flex items-center gap-3 min-w-[120px]">
+                        <div className="flex-1 bg-white/10 rounded-full h-1">
+                          <div
+                            className="h-1 rounded-full bg-emerald-400"
+                            style={{ width: `${(gpa / 4) * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-mono text-white w-10 text-right">
+                          {gpa.toFixed(2)}
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
       </div>
 
       {/* Footer */}
