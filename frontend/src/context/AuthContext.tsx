@@ -12,6 +12,7 @@ interface UserProfile {
   overall_gpa: number | null
   email_verified: boolean
   is_anonymous: boolean
+  notify_rank_change: boolean
   is_admin: boolean
   created_at: string
   updated_at: string

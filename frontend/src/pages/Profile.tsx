@@ -53,6 +53,7 @@ export default function Profile() {
   const [stats, setStats] = useState<ProfileStats | null>(null)
   const [gpaYears, setGpaYears] = useState<GpaYearRow[]>([])
   const [anonymousSaving, setAnonymousSaving] = useState(false)
+  const [notifySaving, setNotifySaving] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editName, setEditName] = useState('')
   const [editError, setEditError] = useState<string | null>(null)
@@ -261,6 +262,17 @@ export default function Profile() {
     setAnonymousSaving(false)
   }
 
+  async function handleNotifyToggle() {
+    if (!profile || notifySaving) return
+    setNotifySaving(true)
+    const { error } = await supabase
+      .from('users')
+      .update({ notify_rank_change: !profile.notify_rank_change })
+      .eq('id', profile.id)
+    if (!error) await refreshProfile()
+    setNotifySaving(false)
+  }
+
   async function handleSignOut() {
     await signOut()
     navigate('/', { replace: true })
@@ -390,12 +402,15 @@ export default function Profile() {
               </div>
 
               {/* Email notifications */}
-              <div className="flex items-center justify-between gap-4">
+              <div
+                onClick={handleNotifyToggle}
+                className={`flex items-center justify-between gap-4 cursor-pointer ${notifySaving ? 'opacity-50 pointer-events-none' : ''}`}
+              >
                 <div>
                   <p className="text-sm font-semibold text-white">Email notifications</p>
                   <p className="text-xs text-white/40 mt-0.5">Notify me when my rank changes</p>
                 </div>
-                <Toggle on={true} />
+                <Toggle on={profile.notify_rank_change} />
               </div>
             </div>
 
