@@ -201,7 +201,7 @@ export default function Profile() {
   const selectedYearRow = gpaYears.find(r => r.academic_year === selectedYearKey)
   const lastUpdated = selectedYearRow?.updated_at ? new Date(selectedYearRow.updated_at) : null
   const hoursSince = lastUpdated ? (Date.now() - lastUpdated.getTime()) / 36e5 : Infinity
-  const rateLimited = hoursSince < 24
+  const rateLimited = false
   const hoursRemaining = rateLimited ? Math.ceil(24 - hoursSince) : 0
 
 
