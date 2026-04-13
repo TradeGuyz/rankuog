@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiChevronLeft, FiChevronDown, FiEdit2, FiX } from 'react-icons/fi'
-import Navbar from '../components/Navbar'
+import Navbar from '../components/layout/Navbar'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 

@@ -1,23 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
 import { FiSearch, FiChevronDown } from 'react-icons/fi'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
-
-interface GpaPerYear {
-  academic_year: string
-  gpa: number
-}
-
-interface Student {
-  id: string
-  display_name: string
-  student_id: string
-  department: string
-  overall_gpa: number
-  enrolment_year: number
-  gpa_per_year: GpaPerYear[]
-  is_current_user?: boolean
-}
+import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../context/AuthContext'
+import type { Student, GpaPerYear } from '../../types'
 
 // year_group = 2025 - enrolment_year + 1
 // 2025 → Year 1, 2024 → Year 2, 2023 → Year 3, 2022 → Year 4
