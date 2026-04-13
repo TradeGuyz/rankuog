@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
 
+./supabase/
+
 # Build outputs
 dist/
 build/
