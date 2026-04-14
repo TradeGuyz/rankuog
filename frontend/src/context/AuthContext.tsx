@@ -11,6 +11,7 @@ interface UserProfile {
   enrolment_year: number
   overall_gpa: number | null
   email_verified: boolean
+  user_verified: boolean
   is_anonymous: boolean
   notify_rank_change: boolean
   is_admin: boolean

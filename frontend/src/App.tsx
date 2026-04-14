@@ -9,6 +9,7 @@ import SignUp from './pages/SignUp'
 import SignOut from './pages/SignOut'
 import AuthCallback from './pages/AuthCallback'
 import Profile from './pages/Profile'
+import Admin from './pages/Admin'
 import TermsOfService from './pages/TemsOfService'
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route path="/signout" element={<SignOut />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="/terms" element={<TermsOfService />} />
         </Routes>
       </AuthProvider>

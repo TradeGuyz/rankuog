@@ -3,6 +3,7 @@ import { FiSearch, FiChevronDown } from 'react-icons/fi'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import type { Student, GpaPerYear } from '../../types'
+import verifiedIcon from '../../assets/verified.png'
 
 // year_group = 2025 - enrolment_year + 1
 // 2025 → Year 1, 2024 → Year 2, 2023 → Year 3, 2022 → Year 4
@@ -75,7 +76,7 @@ export default function LeaderBoard() {
       setFetchError(null)
       const { data, error } = await supabase
         .from('users')
-        .select('id, display_name, student_id, department, enrolment_year, overall_gpa, is_anonymous, gpa_per_year(academic_year, gpa)')
+        .select('id, display_name, student_id, department, enrolment_year, overall_gpa, is_anonymous, user_verified, gpa_per_year(academic_year, gpa)')
         .eq('email_verified', true)
         .not('overall_gpa', 'is', null)
       if (error) {
@@ -93,6 +94,7 @@ export default function LeaderBoard() {
         overall_gpa: Number(row.overall_gpa),
         gpa_per_year: (row.gpa_per_year as GpaPerYear[]) ?? [],
         is_current_user: row.id === currentUserId,
+        user_verified: row.user_verified ?? false,
       }))
       setStudents(mapped)
       setLoadingData(false)
@@ -113,6 +115,19 @@ export default function LeaderBoard() {
     list = [...list].sort((a, b) => getGpa(b, gpaMode) - getGpa(a, gpaMode))
     return list
   }, [students, yearFilter, deptFilter, search, gpaMode])
+
+  const ranksMap = useMemo(() => {
+    const map = new Map<string, number>()
+    filtered.forEach((student, i) => {
+      const gpa = getGpa(student, gpaMode)
+      if (i > 0 && getGpa(filtered[i - 1], gpaMode) === gpa) {
+        map.set(student.id, map.get(filtered[i - 1].id)!)
+      } else {
+        map.set(student.id, i + 1)
+      }
+    })
+    return map
+  }, [filtered, gpaMode])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -209,7 +224,7 @@ export default function LeaderBoard() {
               <tr><td colSpan={5} className="py-12 text-center text-white/30 text-sm">No results found</td></tr>
             ) : (
               pageItems.map((student, i) => {
-                const rank = startIndex + i + 1
+                const rank = ranksMap.get(student.id) ?? startIndex + i + 1
                 const gpa = getGpa(student, gpaMode)
                 const academicStart = gpaMode === 'overall' ? CURRENT_ACADEMIC_START : parseInt(gpaMode.split('/')[0], 10)
                 const yearGroup = getYearGroup(student.enrolment_year, academicStart)
@@ -245,6 +260,9 @@ export default function LeaderBoard() {
                       <div className="flex flex-col justify-center gap-px">
                         <div className="flex items-center gap-2 leading-none">
                           <span className="text-sm font-medium text-white whitespace-nowrap">{student.display_name}</span>
+                          {student.user_verified && (
+                            <img src={verifiedIcon} alt="Verified" className="w-4 h-4 inline-block shrink-0" />
+                          )}
                           {isUser && (
                             <span className="text-[9px] font-bold bg-[#d4af37] text-[#0a0a0a] px-1.5 py-0.5 rounded-sm tracking-widest shrink-0">YOU</span>
                           )}

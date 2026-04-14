@@ -12,4 +12,5 @@ export interface Student {
   enrolment_year: number
   gpa_per_year: GpaPerYear[]
   is_current_user?: boolean
+  user_verified?: boolean
 }

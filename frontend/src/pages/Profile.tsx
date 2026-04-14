@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FiChevronLeft, FiChevronDown, FiEdit2, FiX } from 'react-icons/fi'
 import Navbar from '../components/layout/Navbar'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import verifiedIcon from '../assets/verified.png'
 
 const labelClass = 'text-[10px] font-semibold tracking-widest uppercase text-white/40'
 
@@ -67,6 +68,9 @@ export default function Profile() {
   const [gpaOverall, setGpaOverall] = useState('')
   const [gpaSaving, setGpaSaving] = useState(false)
   const [gpaError, setGpaError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [verificationUploading, setVerificationUploading] = useState(false)
+  const [verificationPending, setVerificationPending] = useState(false)
 
   useEffect(() => {
     if (loading) return
@@ -135,7 +139,21 @@ export default function Profile() {
     fetchData()
   }, [profile])
 
+  useEffect(() => {
+    if (!profile) return
+    const key = `verification_pending_${profile.id}`
+    if (profile.user_verified) {
+      localStorage.removeItem(key)
+      setVerificationPending(false)
+    } else {
+      setVerificationPending(Boolean(localStorage.getItem(key)))
+    }
+  }, [profile?.id, profile?.user_verified])
+
   if (loading || !session || !profile) return null
+
+  const isVerified = profile.user_verified ?? false
+  const PENDING_KEY = `verification_pending_${profile.id}`
 
   const yearStart = getAcademicYearStart()
   const yearGroup = yearStart - profile.enrolment_year + 1
@@ -295,6 +313,41 @@ export default function Profile() {
     navigate('/', { replace: true })
   }
 
+  async function handleVerificationUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !profile) return
+    const ext = file.name.split('.').pop()
+    const path = `${profile.id}/verification.${ext}`
+    setVerificationUploading(true)
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('verification-documents')
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from('verification-documents')
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
+      if (signedError) throw signedError
+
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ verification_image_url: signedData.signedUrl })
+        .eq('id', profile.id)
+      if (dbError) throw dbError
+
+      const key = `verification_pending_${profile.id}`
+      localStorage.setItem(key, 'true')
+      setVerificationPending(true)
+      await refreshProfile()
+    } catch (err) {
+      console.error('Verification upload failed:', err)
+    } finally {
+      setVerificationUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
       <Navbar />
@@ -326,7 +379,7 @@ export default function Profile() {
 
               {/* Name + info */}
               <div>
-                <h2 className="text-lg md:text-2xl font-bold text-white">{profile.display_name}</h2>
+                <h2 className="text-lg md:text-2xl font-bold text-white">{profile.display_name}{isVerified ? <img src={verifiedIcon} alt="Verified" className="w-4 h-4 inline-block ml-1" /> : ''}</h2>
                 <p className="text-xs md:text-sm text-white/40 mt-1 flex flex-wrap items-center gap-x-1.5 md:gap-x-2">
                   <span className="font-mono">{profile.student_id}</span>
                   <span className="text-white/20">·</span>
@@ -428,6 +481,50 @@ export default function Profile() {
                   <p className="text-xs text-white/40 mt-0.5">Notify me when my rank changes</p>
                 </div>
                 <Toggle on={profile.notify_rank_change} />
+              </div>
+
+              {/* Verify Account */}
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-white">Verify Account (Optional)</p>
+                  <p className="text-xs text-white/40 mt-0.5">Upload a photo of your student ID to validate your GPA entries</p>
+                </div>
+
+                {isVerified ? (
+                  <span className="bg-emerald-900/60 text-emerald-300 border border-emerald-700/40 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide flex-shrink-0">
+                    Verified
+                  </span>
+                ) : verificationPending ? (
+                  <span className="bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/30 rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide flex-shrink-0">
+                    Pending
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={verificationUploading}
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
+                    title="Upload verification document"
+                  >
+                    {verificationUploading ? (
+                      <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleVerificationUpload}
+                />
               </div>
             </div>
 
