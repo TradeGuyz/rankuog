@@ -1,3 +1,4 @@
+// v4
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -25,7 +26,7 @@ Deno.serve(async (req) => {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>You're verified — RankUoG</title>
+  <title>You're verified on RankUoG</title>
 </head>
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:'Segoe UI',Arial,sans-serif;color:#e5e5e5;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:40px 20px;">
@@ -54,11 +55,23 @@ Deno.serve(async (req) => {
               </p>
 
               <p style="margin:0 0 32px;font-size:15px;line-height:1.7;color:rgba(255,255,255,0.65);">
-                The badge signals to other students that your GPA entries have been validated — a mark of trust on the platform.
+                The badge confirms that you are a real University of Guyana student. It verifies your identity, not your GPA entries.
+              </p>
+
+              <!-- Divider -->
+              <div style="border-top:1px solid rgba(255,255,255,0.06);margin-bottom:28px;"></div>
+
+              <p style="margin:0 0 8px;font-size:13px;color:rgba(255,255,255,0.35);">
+                By using RankUoG you agree to our Terms of Service. You can read them at any time here:
+              </p>
+              <p style="margin:0 0 28px;">
+                <a href="https://rankuog.com/terms" style="color:#d4af37;font-size:13px;text-decoration:none;font-weight:600;">
+                  rankuog.com/terms
+                </a>
               </p>
 
               <a href="https://rankuog.com" style="display:inline-block;background:#d4af37;color:#0a0a0a;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;">
-                View Leaderboard →
+                View Leaderboard
               </a>
             </td>
           </tr>

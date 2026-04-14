@@ -69,8 +69,13 @@ export default function SignUp() {
     }
 
     // Fire-and-forget welcome email — don't block signup on email failure
-    supabase.functions.invoke('send-welcome-email', {
-      body: { name: displayName.trim(), email: session.user.email },
+    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-welcome-email`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: displayName.trim(), email: session.user.email }),
     })
 
     await refreshProfile()

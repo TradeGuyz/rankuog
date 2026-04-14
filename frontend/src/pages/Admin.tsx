@@ -61,8 +61,13 @@ export default function Admin() {
     const user = submissions.find(s => s.id === id)
     await supabase.from('users').update({ user_verified: true }).eq('id', id)
     if (user) {
-      supabase.functions.invoke('notify-user-verified', {
-        body: { userEmail: user.email, userName: user.display_name },
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-user-verified`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userEmail: user.email, userName: user.display_name }),
       })
     }
     setSubmissions(prev => prev.filter(s => s.id !== id))

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+// v4
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -91,7 +92,7 @@ Deno.serve(async (req) => {
               ` : ''}
 
               <a href="https://rankuog.com/admin" style="display:inline-block;background:#d4af37;color:#0a0a0a;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;">
-                Review in Admin Panel →
+                Review in Admin Panel
               </a>
             </td>
           </tr>

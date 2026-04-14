@@ -347,12 +347,17 @@ export default function Profile() {
         .select('*', { count: 'exact', head: true })
         .not('verification_image_url', 'is', null)
         .eq('user_verified', false)
-      supabase.functions.invoke('notify-admin-verification', {
-        body: {
+      fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-admin-verification`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           userName: profile.display_name,
           studentId: profile.student_id,
           pendingCount: count ?? 1,
-        },
+        }),
       })
     } catch (err) {
       console.error('Verification upload failed:', err)
