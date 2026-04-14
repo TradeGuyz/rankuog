@@ -501,7 +501,7 @@ export default function Profile() {
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-white">Verify Account (Optional)</p>
-                  <p className="text-xs text-white/40 mt-0.5">Upload a photo of your student ID to validate your GPA entries</p>
+                  <p className="text-xs text-white/40 mt-0.5">Upload a photo of your student ID to validate your Account</p>
                 </div>
 
                 {isVerified ? (
