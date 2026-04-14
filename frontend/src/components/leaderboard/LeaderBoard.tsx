@@ -1,14 +1,20 @@
 import { useState, useMemo, useEffect } from 'react'
-import { FiSearch, FiChevronDown } from 'react-icons/fi'
+import { FiSearch, FiChevronDown, FiEdit2, FiX } from 'react-icons/fi'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import type { Student, GpaPerYear } from '../../types'
 import verifiedIcon from '../../assets/verified.png'
 
-// year_group = 2025 - enrolment_year + 1
-// 2025 → Year 1, 2024 → Year 2, 2023 → Year 3, 2022 → Year 4
-const CURRENT_ACADEMIC_START = 2025
-const ACADEMIC_YEARS = ['2025/2026', '2024/2025', '2023/2024', '2022/2023'] as const
+function getAcademicYearStart(): number {
+  const now = new Date()
+  return now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1
+}
+
+const CURRENT_ACADEMIC_START = getAcademicYearStart()
+const ACADEMIC_YEARS = Array.from({ length: 4 }, (_, i) => {
+  const s = CURRENT_ACADEMIC_START - i
+  return `${s}/${s + 1}`
+})
 
 
 const DEPT_STYLES: Record<string, string> = {
@@ -58,10 +64,19 @@ function getGpa(student: Student, mode: string): number {
 }
 
 export default function LeaderBoard() {
-  const { session, loading: authLoading } = useAuth()
+  const { session, loading: authLoading, profile, refreshProfile } = useAuth()
   const [students, setStudents] = useState<Student[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const [gpaOpen, setGpaOpen] = useState(false)
+  const [userGpaYears, setUserGpaYears] = useState<GpaPerYear[]>([])
+  const [selectedYearKey, setSelectedYearKey] = useState('')
+  const [gpaYear, setGpaYear] = useState('')
+  const [gpaOverall, setGpaOverall] = useState('')
+  const [gpaSaving, setGpaSaving] = useState(false)
+  const [gpaError, setGpaError] = useState<string | null>(null)
 
   const [gpaMode, setGpaMode] = useState<string>('overall')
   const [yearFilter, setYearFilter] = useState<number | null>(null)
@@ -100,11 +115,14 @@ export default function LeaderBoard() {
       setLoadingData(false)
     }
     fetchLeaderboard()
-  }, [authLoading, session?.user.id])
+  }, [authLoading, session?.user.id, refreshKey])
 
   const filtered = useMemo(() => {
+    const academicStart = gpaMode === 'overall' ? CURRENT_ACADEMIC_START : parseInt(gpaMode.split('/')[0], 10)
     let list = students.filter(s => {
-      if (yearFilter !== null && getYearGroup(s.enrolment_year, CURRENT_ACADEMIC_START) !== yearFilter) return false
+      if (gpaMode !== 'overall' && s.enrolment_year > academicStart) return false
+      if (gpaMode !== 'overall' && !s.gpa_per_year.some(y => y.academic_year === gpaMode)) return false
+      if (yearFilter !== null && getYearGroup(s.enrolment_year, academicStart) !== yearFilter) return false
       if (deptFilter !== null && s.department !== deptFilter) return false
       if (search) {
         const q = search.toLowerCase()
@@ -136,30 +154,89 @@ export default function LeaderBoard() {
 
   function resetPage() { setPage(1) }
 
+  const currentYearKey = `${CURRENT_ACADEMIC_START}/${CURRENT_ACADEMIC_START + 1}`
+  const availableYears: string[] = []
+  if (profile) {
+    const upperBound = Math.min(CURRENT_ACADEMIC_START, profile.enrolment_year + 3)
+    for (let y = profile.enrolment_year; y <= upperBound; y++) {
+      availableYears.push(`${y}/${y + 1}`)
+    }
+  }
+
+  async function openGpa() {
+    if (!profile) return
+    const { data } = await supabase
+      .from('gpa_per_year')
+      .select('academic_year, gpa')
+      .eq('user_id', profile.id)
+    const years: GpaPerYear[] = data ?? []
+    setUserGpaYears(years)
+    const row = years.find(r => r.academic_year === currentYearKey)
+    setSelectedYearKey(currentYearKey)
+    setGpaYear(row ? row.gpa.toFixed(2) : '')
+    setGpaOverall(profile.overall_gpa != null ? profile.overall_gpa.toFixed(2) : '')
+    setGpaError(null)
+    setGpaOpen(true)
+  }
+
+  function handleYearChange(key: string) {
+    setSelectedYearKey(key)
+    const row = userGpaYears.find(r => r.academic_year === key)
+    setGpaYear(row ? row.gpa.toFixed(2) : '')
+    setGpaError(null)
+  }
+
+  async function handleGpaSubmit() {
+    if (!profile) return
+    const yearVal = parseFloat(gpaYear)
+    const overallVal = parseFloat(gpaOverall)
+    if (isNaN(yearVal) || yearVal < 0 || yearVal > 4) {
+      setGpaError('Academic year GPA must be between 0.00 and 4.00')
+      return
+    }
+    if (isNaN(overallVal) || overallVal < 0 || overallVal > 4) {
+      setGpaError('Overall GPA must be between 0.00 and 4.00')
+      return
+    }
+    setGpaSaving(true)
+    setGpaError(null)
+    const [upsertRes, updateRes] = await Promise.all([
+      supabase.from('gpa_per_year').upsert(
+        { user_id: profile.id, academic_year: selectedYearKey, gpa: yearVal },
+        { onConflict: 'user_id,academic_year' }
+      ),
+      supabase.from('users').update({ overall_gpa: overallVal }).eq('id', profile.id),
+    ])
+    const err = upsertRes.error ?? updateRes.error
+    if (err) {
+      setGpaError(err.message)
+      setGpaSaving(false)
+      return
+    }
+    await refreshProfile()
+    setRefreshKey(k => k + 1)
+    setGpaSaving(false)
+    setGpaOpen(false)
+  }
+
   return (
     <section className="max-w-[1000px] mx-auto px-6 pb-12">
 
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        {/* GPA mode toggle */}
-        <div className="flex rounded-md overflow-hidden border border-white/10">
-          {[
-            { label: 'Overall GPA', value: 'overall' },
-            { label: ACADEMIC_YEARS[0], value: ACADEMIC_YEARS[0] },
-            { label: ACADEMIC_YEARS[1], value: ACADEMIC_YEARS[1] },
-          ].map(opt => (
-            <button
-              key={opt.value}
-              onClick={() => { setGpaMode(opt.value); resetPage() }}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                gpaMode === opt.value
-                  ? 'bg-[#d4af37] text-[#0a0a0a]'
-                  : 'text-white/60 hover:text-white'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        {/* GPA mode dropdown */}
+        <div className="relative">
+          <select
+            value={gpaMode}
+            onChange={e => { setGpaMode(e.target.value); setYearFilter(null); resetPage() }}
+            className="appearance-none bg-[#111827] border border-white/10 rounded-md pl-3 pr-8 py-1.5 text-xs text-white/80 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#d4af37] focus:border-[#d4af37]"
+          >
+            <option value="overall" className="bg-[#111827] text-white">Overall GPA</option>
+            {ACADEMIC_YEARS.map(y => (
+              <option key={y} value={y} className="bg-[#111827] text-white">{y}</option>
+            ))}
+          </select>
+          <FiChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40" />
         </div>
 
         {/* Year group dropdown */}
@@ -192,16 +269,27 @@ export default function LeaderBoard() {
           <FiChevronDown size={12} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40" />
         </div>
 
-        {/* Search */}
-        <div className="ml-auto hidden md:flex items-center gap-2 bg-white/5 border border-white/10 rounded-md px-3 py-1.5">
-          <FiSearch size={13} className="text-white/40 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search name or ID..."
-            value={search}
-            onChange={e => { setSearch(e.target.value); resetPage() }}
-            className="bg-transparent text-xs text-white/80 placeholder-white/30 outline-none w-44"
-          />
+        {/* Search + Update GPA */}
+        <div className="ml-auto hidden md:flex items-center gap-2">
+          <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-md px-3 py-1.5">
+            <FiSearch size={13} className="text-white/40 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search name or ID..."
+              value={search}
+              onChange={e => { setSearch(e.target.value); resetPage() }}
+              className="bg-transparent text-xs text-white/80 placeholder-white/30 outline-none w-44"
+            />
+          </div>
+          {session && (
+            <button
+              onClick={openGpa}
+              className="p-2 rounded-md border border-white/20 text-white/70 hover:border-white/40 hover:text-white transition-colors cursor-pointer shrink-0"
+              title="Update GPA"
+            >
+              <FiEdit2 size={13} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -280,7 +368,7 @@ export default function LeaderBoard() {
 
                     {/* Year */}
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span className="text-sm font-mono text-white/60">Year {yearGroup}</span>
+                      <span className="text-sm font-mono text-white/60">{yearGroup > 4 ? 'Grad' : `Year ${yearGroup}`}</span>
                     </td>
 
                     {/* GPA bar + value */}
@@ -339,6 +427,94 @@ export default function LeaderBoard() {
           </div>
         )}
       </div>
+      {/* Update GPA Modal */}
+      {gpaOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4"
+          onClick={() => setGpaOpen(false)}
+        >
+          <div
+            className="bg-[#0a0a0a] border border-white/10 rounded-2xl px-8 py-8 w-full max-w-[400px]"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-1">
+              <h3 className="text-lg font-bold text-white">Update GPA</h3>
+              <button onClick={() => setGpaOpen(false)} className="text-white/40 hover:text-white transition-colors cursor-pointer">
+                <FiX size={18} />
+              </button>
+            </div>
+            <p className="text-sm text-white/40 mb-6">Enter your GPA on the 4.0 scale.</p>
+
+            <div className="flex flex-col gap-4">
+              {/* Academic Year */}
+              <div>
+                <label className="text-[10px] font-semibold tracking-widest uppercase text-white/40">Academic Year</label>
+                <div className="relative mt-1">
+                  <select
+                    value={selectedYearKey}
+                    onChange={e => handleYearChange(e.target.value)}
+                    className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 pr-9 text-sm text-white focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
+                  >
+                    {availableYears.map(y => (
+                      <option key={y} value={y} className="bg-[#1a1a1a] text-white">
+                        {y}{y === currentYearKey ? ' (current)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <FiChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40" />
+                </div>
+              </div>
+
+              {/* Academic Year GPA */}
+              <div>
+                <label className="text-[10px] font-semibold tracking-widest uppercase text-white/40">Academic Year GPA</label>
+                <input
+                  type="number"
+                  min={0} max={4} step={0.01}
+                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors"
+                  placeholder="e.g. 3.85"
+                  value={gpaYear}
+                  onChange={e => setGpaYear(e.target.value)}
+                  autoFocus
+                />
+                <p className="text-[11px] text-white/30 mt-1">GPA for the selected academic year only (0.00 – 4.00)</p>
+              </div>
+
+              {/* Overall GPA */}
+              <div>
+                <label className="text-[10px] font-semibold tracking-widest uppercase text-white/40">Overall GPA (Cumulative)</label>
+                <input
+                  type="number"
+                  min={0} max={4} step={0.01}
+                  className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-colors"
+                  placeholder="e.g. 3.72"
+                  value={gpaOverall}
+                  onChange={e => setGpaOverall(e.target.value)}
+                />
+                <p className="text-[11px] text-white/30 mt-1">Your cumulative GPA across all semesters</p>
+              </div>
+
+              {gpaError && <p className="text-xs text-red-400">{gpaError}</p>}
+
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={handleGpaSubmit}
+                  disabled={gpaSaving}
+                  className="flex-1 bg-[#d4af37] hover:bg-[#f5d97a] disabled:opacity-50 disabled:cursor-not-allowed text-[#0a0a0a] font-bold text-sm py-2.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  {gpaSaving ? 'Submitting…' : 'Submit GPA'}
+                </button>
+                <button
+                  onClick={() => setGpaOpen(false)}
+                  className="flex-1 border border-white/10 text-white/70 hover:text-white hover:border-white/30 text-sm font-medium py-2.5 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

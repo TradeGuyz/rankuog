@@ -11,6 +11,7 @@ interface PendingVerification {
   student_id: string
   department: string
   enrolment_year: number
+  email: string
   verification_image_url: string
   created_at: string
 }
@@ -43,7 +44,7 @@ export default function Admin() {
     async function fetchPending() {
       const { data } = await supabase
         .from('users')
-        .select('id, display_name, student_id, department, enrolment_year, verification_image_url, created_at')
+        .select('id, display_name, student_id, department, enrolment_year, email, verification_image_url, created_at')
         .not('verification_image_url', 'is', null)
         .eq('user_verified', false)
         .order('created_at', { ascending: true })
@@ -57,7 +58,13 @@ export default function Admin() {
 
   async function handleApprove(id: string) {
     setActioning(id)
+    const user = submissions.find(s => s.id === id)
     await supabase.from('users').update({ user_verified: true }).eq('id', id)
+    if (user) {
+      supabase.functions.invoke('notify-user-verified', {
+        body: { userEmail: user.email, userName: user.display_name },
+      })
+    }
     setSubmissions(prev => prev.filter(s => s.id !== id))
     if (modalItem?.id === id) setModalItem(null)
     setActioning(null)

@@ -212,7 +212,8 @@ export default function Profile() {
   const currentYearRow = gpaYears.find(r => r.academic_year === currentYearKey)
 
   const availableYears: string[] = []
-  for (let y = 2023; y <= yearStart; y++) {
+  const upperBound = Math.min(yearStart, profile.enrolment_year + 3)
+  for (let y = profile.enrolment_year; y <= upperBound; y++) {
     availableYears.push(`${y}/${y + 1}`)
   }
 
@@ -340,6 +341,19 @@ export default function Profile() {
       localStorage.setItem(key, 'true')
       setVerificationPending(true)
       await refreshProfile()
+
+      const { count } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .not('verification_image_url', 'is', null)
+        .eq('user_verified', false)
+      supabase.functions.invoke('notify-admin-verification', {
+        body: {
+          userName: profile.display_name,
+          studentId: profile.student_id,
+          pendingCount: count ?? 1,
+        },
+      })
     } catch (err) {
       console.error('Verification upload failed:', err)
     } finally {
